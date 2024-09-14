@@ -20,9 +20,9 @@ public class RedisUtil {
     final private RedisTemplate redisTemplate;
     final private ObjectMapper objectMapper;
 
-    public <T> Boolean set(String key, T value) {
+    public <T> Boolean set(String key, T value, long ttl, TimeUnit timeUnit) {
         try {
-            redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(value), 1, TimeUnit.HOURS);
+            redisTemplate.opsForValue().set(key, objectMapper.writeValueAsString(value), ttl, timeUnit);
             return true;
         } catch (JsonProcessingException e) {
             log.warn(e);
