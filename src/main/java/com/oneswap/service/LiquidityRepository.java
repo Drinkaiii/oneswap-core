@@ -45,7 +45,7 @@ public class LiquidityRepository {
         }
 
         // combine two token address as key
-        String key = token0 + ":" + token1 + ":" + liquidity.getExchanger();
+        String key = "liquidity:" + token0 + ":" + token1 + ":" + liquidity.getExchanger();
         // update data
         liquidity.setToken0(token0);
         liquidity.setToken1(token1);
@@ -76,12 +76,12 @@ public class LiquidityRepository {
         }
 
         // combine two token address as key
-        String key = token0 + ":" + token1+ ":" + exchanger;
+        String key = "liquidity:" + token0 + ":" + token1 + ":" + exchanger;
         // update data
         try {
             // get data from Redis
             Liquidity liquidity = redisUtil.get(key, Liquidity.class);
-            if (liquidity == null)
+            if (liquidity == null)//TODO
                 return false;
             // update data
             BigInteger reserve0 = new BigInteger(liquidity.getAmount0().toString());

@@ -65,7 +65,7 @@ public class UniswapService {
         liquidity.setAmount0(reserve0);
         liquidity.setAmount1(reserve1);
         liquidity.setExchanger("Uniswap");
-        liquidity.setAlgorithm("dividen");
+        liquidity.setAlgorithm("Weighted");
         liquidity.setWeight(1.0);
 
         return liquidity;
