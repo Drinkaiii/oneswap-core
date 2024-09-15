@@ -4,7 +4,7 @@ import com.oneswap.model.Liquidity;
 import com.oneswap.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigInteger;
@@ -14,6 +14,9 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 @Log4j2
 public class LiquidityRepository {
+
+    @Value("${blockchain}")
+    private String blockchain;
 
     private final RedisUtil redisUtil;
 
@@ -45,7 +48,7 @@ public class LiquidityRepository {
         }
 
         // combine two token address as key
-        String key = "liquidity:" + token0 + ":" + token1 + ":" + liquidity.getExchanger();
+        String key = "liquidity:" + token0 + ":" + token1 + ":" + liquidity.getExchanger() + ":" + blockchain;
         // update data
         liquidity.setToken0(token0);
         liquidity.setToken1(token1);
@@ -76,7 +79,7 @@ public class LiquidityRepository {
         }
 
         // combine two token address as key
-        String key = "liquidity:" + token0 + ":" + token1 + ":" + exchanger;
+        String key = "liquidity:" + token0 + ":" + token1 + ":" + exchanger + ":" + blockchain;
         // update data
         try {
             // get data from Redis

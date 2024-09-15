@@ -4,6 +4,7 @@ import com.oneswap.model.Liquidity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
@@ -28,6 +29,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class BalancerService {
+
+    @Value("${blockchain}")
+    private String blockchain;
 
     @Autowired
     @Qualifier("web3jHttp")
@@ -99,6 +103,7 @@ public class BalancerService {
 
         // set data
         Liquidity liquidity = new Liquidity();
+        liquidity.setNetwork(blockchain);
         liquidity.setToken0(filteredTokenAddresses.get(0));
         liquidity.setAmount0(filteredBalances.get(0));
         liquidity.setToken1(filteredTokenAddresses.get(1));

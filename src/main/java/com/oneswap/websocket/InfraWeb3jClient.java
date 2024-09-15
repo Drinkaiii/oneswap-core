@@ -8,6 +8,7 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,9 @@ import java.util.*;
 @Log4j2
 public class InfraWeb3jClient {
 
+    @Value("${blockchain}")
+    private String blockchain;
+
     @Autowired
     @Qualifier("web3jWebsocket")
     private Web3j web3j;
@@ -45,17 +49,8 @@ public class InfraWeb3jClient {
     private final BalancerService balancerService;
     private final LiquidityRepository liquidityRepository;
 
-    List<String> uniswapPairAddresses = List.of(
-            "0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852", // USDT-WETH
-            "0xBb2b8038a1640196FbE3e38816F3e67Cba72D940"  // WBTC-WETH
-    );
-    // WBTC-WETH、wstETH-WETH Stable Pool、rsETH-WETH Stable Pool
-    List balancerPairAddressesAndId = List.of(
-            List.of("0xa6f548df93de924d73be7d25dc02554c6bd66db500020000000000000000000e", "0xa6f548df93de924d73be7d25dc02554c6bd66db5"),
-            List.of("0x93d199263632a4ef4bb438f1feb99e57b4b5f0bd0000000000000000000005c2", "0x93d199263632a4ef4bb438f1feb99e57b4b5f0bd"),
-            List.of("0x58aadfb1afac0ad7fca1148f3cde6aedf5236b6d00000000000000000000067f", "0x58aadfb1afac0ad7fca1148f3cde6aedf5236b6d"),
-            List.of("0x3de27efa2f1aa663ae5d458857e731c129069f29000200000000000000000588", "0x3de27efa2f1aa663ae5d458857e731c129069f29")
-    );
+    List<String> uniswapPairAddresses = new ArrayList<>();
+    List balancerPairAddressesAndId = new ArrayList();
     private Set<String> monitoredBalancerPoolAddresses = new HashSet<>();
 
     // save the contracts of all token0 and token1
@@ -98,6 +93,26 @@ public class InfraWeb3jClient {
 
     @PostConstruct
     public void init() throws Exception {
+        if ("Ethereum".equals(blockchain)){
+            uniswapPairAddresses = List.of( // USDT-WETH、WBTC-WETH
+                    "0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852",
+                    "0xBb2b8038a1640196FbE3e38816F3e67Cba72D940"
+            );
+            balancerPairAddressesAndId = List.of( // WBTC-WETH、wstETH-WETH Stable Pool、rsETH-WETH Stable Pool
+                    List.of("0xa6f548df93de924d73be7d25dc02554c6bd66db500020000000000000000000e", "0xa6f548df93de924d73be7d25dc02554c6bd66db5"),
+                    List.of("0x93d199263632a4ef4bb438f1feb99e57b4b5f0bd0000000000000000000005c2", "0x93d199263632a4ef4bb438f1feb99e57b4b5f0bd"),
+                    List.of("0x58aadfb1afac0ad7fca1148f3cde6aedf5236b6d00000000000000000000067f", "0x58aadfb1afac0ad7fca1148f3cde6aedf5236b6d"),
+                    List.of("0x3de27efa2f1aa663ae5d458857e731c129069f29000200000000000000000588", "0x3de27efa2f1aa663ae5d458857e731c129069f29")
+            );
+        }
+        if ("Sepolia".equals(blockchain)){
+            uniswapPairAddresses = List.of( // WBTC-WETH
+                    "0x0E5D4672676a325245C483199a717c45A55a63dF"
+            );
+            balancerPairAddressesAndId = List.of(
+
+            );
+        }
 
         for (Object AddressAndId : balancerPairAddressesAndId) {
             String contractAddress = (String) ((List) AddressAndId).get(1);

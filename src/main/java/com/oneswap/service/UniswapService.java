@@ -3,6 +3,7 @@ package com.oneswap.service;
 import com.oneswap.model.Liquidity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
@@ -23,6 +24,9 @@ import java.util.List;
 
 @Service
 public class UniswapService {
+
+    @Value("${blockchain}")
+    private String blockchain;
 
     @Autowired
     @Qualifier("web3jHttp")
@@ -60,6 +64,7 @@ public class UniswapService {
         BigInteger reserve1 = (BigInteger) decodedResponse.get(1).getValue();
 
         Liquidity liquidity = new Liquidity();
+        liquidity.setNetwork(blockchain);
         liquidity.setToken0(token0);
         liquidity.setToken1(token1);
         liquidity.setAmount0(reserve0);
