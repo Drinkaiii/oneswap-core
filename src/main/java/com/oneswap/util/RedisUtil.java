@@ -17,6 +17,9 @@ import java.util.concurrent.TimeUnit;
 @Log4j2
 public class RedisUtil {
 
+    public static final String LIQUIDITY_TOPIC = "liquidityTopic";
+    public static final String RECORD_TOPIC = "recordTopic";
+
     final private RedisTemplate redisTemplate;
     final private ObjectMapper objectMapper;
 
@@ -58,5 +61,14 @@ public class RedisUtil {
             log.error("Redis connection failure");
         }
 
+    }
+
+    public <T> void publish(String topic, T message) {
+        try {
+            String jsonMessage = objectMapper.writeValueAsString(message);
+            redisTemplate.convertAndSend(topic, jsonMessage);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+        }
     }
 }

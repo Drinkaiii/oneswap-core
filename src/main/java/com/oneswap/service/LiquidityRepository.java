@@ -23,7 +23,7 @@ public class LiquidityRepository {
     public static String EXCHANGER_UNISWAP = "Uniswap";
     public static String EXCHANGER_BALANCER = "Balancer";
 
-    public boolean saveTokenPair(Liquidity liquidity) {
+    public String saveTokenPair(Liquidity liquidity) {
 
         // 暂时使用 tokenA 和 tokenB
         String tokenA = liquidity.getToken0();
@@ -57,11 +57,10 @@ public class LiquidityRepository {
 
         // save to Redis
         redisUtil.set(key, liquidity, 10, TimeUnit.MINUTES);
-        return true;
+        return key;
     }
 
-
-    public boolean updateTokenPair(String tokenA, String tokenB, BigInteger amountA, BigInteger amountB, String exchanger) {
+    public String updateTokenPair(String tokenA, String tokenB, BigInteger amountA, BigInteger amountB, String exchanger) {
 
         // 根據 tokenA 和 tokenB 的顺序确定 token0 和 token1
         String token0, token1;
@@ -85,7 +84,7 @@ public class LiquidityRepository {
             // get data from Redis
             Liquidity liquidity = redisUtil.get(key, Liquidity.class);
             if (liquidity == null)//TODO
-                return false;
+                return "";
             // update data
             BigInteger reserve0 = new BigInteger(liquidity.getAmount0().toString());
             BigInteger reserve1 = new BigInteger(liquidity.getAmount1().toString());
@@ -93,10 +92,10 @@ public class LiquidityRepository {
             liquidity.setAmount1(reserve1.add(amount1));
             // save to Redis
             redisUtil.set(key, liquidity, 10, TimeUnit.MINUTES);
-            return true;
         } catch (Exception e) {
             log.error("Error updating token pair for address {} | {}: {}", token0, token1, e.getMessage(), e);
-            return false;
+            return "";
         }
+        return key;
     }
 }

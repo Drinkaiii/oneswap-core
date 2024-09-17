@@ -2,10 +2,8 @@ package com.oneswap.websocket;
 
 import com.oneswap.model.Liquidity;
 import com.oneswap.model.User;
-import com.oneswap.service.BalancerService;
-import com.oneswap.service.LiquidityRepository;
-import com.oneswap.service.RecordService;
-import com.oneswap.service.UniswapService;
+import com.oneswap.service.*;
+import com.oneswap.util.RedisUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +52,7 @@ public class InfraWeb3jClient {
     private final BalancerService balancerService;
     private final LiquidityRepository liquidityRepository;
     private final RecordService recordService;
+    private final RedisPublish redisPublish;
 
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
@@ -302,7 +301,8 @@ public class InfraWeb3jClient {
                 ? amountBIn.getValue()
                 : amountBOut.getValue().negate();
 
-        liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
+        String key = liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
+        redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
 
         log.info("=======================Uniswap Swap event detected=======================");
         log.info("Swap in monitored pool: " + contractAddress);
@@ -346,7 +346,8 @@ public class InfraWeb3jClient {
             log.info("[In] token: " + tokenIn.getValue() + " , amount: " + amountIn.getValue());
             log.info("[Out] token: " + tokenOut.getValue() + " , amount: " + amountOut.getValue());
             BigInteger tokenAmountOut = amountOut.getValue().negate();
-            liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
+            String key = liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
+            redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
         }
     }
 
