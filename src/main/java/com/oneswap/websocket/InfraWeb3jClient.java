@@ -1,8 +1,10 @@
 package com.oneswap.websocket;
 
 import com.oneswap.model.Liquidity;
+import com.oneswap.model.User;
 import com.oneswap.service.BalancerService;
 import com.oneswap.service.LiquidityRepository;
+import com.oneswap.service.RecordService;
 import com.oneswap.service.UniswapService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -23,6 +25,7 @@ import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Uint256;
+import org.web3j.abi.datatypes.generated.Uint8;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.EthFilter;
@@ -41,6 +44,8 @@ public class InfraWeb3jClient {
 
     @Value("${blockchain}")
     private String blockchain;
+    @Value("${ONESWAP_V1_SEPOLIA_ADDRESS}")
+    private String ONESWAP_V1_SEPOLIA_ADDRESS; // todo make network change infra
 
     @Autowired
     @Qualifier("web3jWebsocket")
@@ -48,6 +53,7 @@ public class InfraWeb3jClient {
     private final UniswapService uniswapService;
     private final BalancerService balancerService;
     private final LiquidityRepository liquidityRepository;
+    private final RecordService recordService;
 
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
@@ -91,6 +97,18 @@ public class InfraWeb3jClient {
             )
     );
 
+    private static final Event ONESWAP_TRADE_EXECUTED_EVENT = new Event("TradeExecuted",
+            Arrays.asList(
+                    new TypeReference<Address>(true) {},  // trader
+                    new TypeReference<Address>(true) {},  // tokenIn
+                    new TypeReference<Address>(true) {},  // tokenOut
+                    new TypeReference<Uint256>() {},      // amountIn
+                    new TypeReference<Uint256>() {},      // amountOut
+                    new TypeReference<Uint8>() {}         // exchange (enum type)
+            )
+    );
+    private static final List<TypeReference<Type>> ONESWAP_TRADE_EXECUTED_NON_INDEXED_PARAMETERS = ONESWAP_TRADE_EXECUTED_EVENT.getNonIndexedParameters();
+
     @PostConstruct
     public void init() throws Exception {
         if ("Ethereum".equals(blockchain)){
@@ -109,8 +127,8 @@ public class InfraWeb3jClient {
             uniswapPairAddresses = List.of( // WBTC-WETH
                     "0x0E5D4672676a325245C483199a717c45A55a63dF"
             );
-            balancerPairAddressesAndId = List.of(
-
+            balancerPairAddressesAndId = List.of( // WBTC-WETH
+                List.of("0xc1e0942d3babe2ce30a78d0702a8b5ace651505400020000000000000000014d","0xc1e0942D3bABE2CE30a78D0702a8b5AcE6515054")
             );
         }
 
@@ -203,6 +221,22 @@ public class InfraWeb3jClient {
         }, error -> {
             log.error("Error while subscribing to Vault contract events", error);
         });
+
+        // listen Oneswap V1 SWAP event
+        String dexAggregatorAddress = ONESWAP_V1_SEPOLIA_ADDRESS;
+        EthFilter oneswapTradeExecutedFilter = new EthFilter(
+                DefaultBlockParameterName.LATEST,
+                DefaultBlockParameterName.LATEST,
+                dexAggregatorAddress
+        );
+        String oneswapTradeExecutedEventSignature = EventEncoder.encode(ONESWAP_TRADE_EXECUTED_EVENT);
+        oneswapTradeExecutedFilter.addSingleTopic(oneswapTradeExecutedEventSignature);
+        web3j.ethLogFlowable(oneswapTradeExecutedFilter).subscribe(log -> {
+            processOneswapTradeExecutedEvent(log);
+        }, error -> {
+            log.error("Error while subscribing to TradeExecuted event", error);
+        });
+        log.info("Subscribed to TradeExecuted events for DexAggregator contract: " + dexAggregatorAddress);
     }
 
     private String getToken0(String contractAddress) throws Exception {
@@ -315,6 +349,45 @@ public class InfraWeb3jClient {
             liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
         }
     }
+
+    private void processOneswapTradeExecutedEvent(Log eventLog) {
+        // Decode event log
+        String eventSignature = EventEncoder.encode(ONESWAP_TRADE_EXECUTED_EVENT);
+        if (!eventLog.getTopics().get(0).equals(eventSignature)) {
+            return;
+        }
+
+        // Decode indexed parameters
+        Address trader = (Address) FunctionReturnDecoder.decodeIndexedValue(eventLog.getTopics().get(1), ONESWAP_TRADE_EXECUTED_EVENT.getIndexedParameters().get(0));
+        Address tokenIn = (Address) FunctionReturnDecoder.decodeIndexedValue(eventLog.getTopics().get(2), ONESWAP_TRADE_EXECUTED_EVENT.getIndexedParameters().get(1));
+        Address tokenOut = (Address) FunctionReturnDecoder.decodeIndexedValue(eventLog.getTopics().get(3), ONESWAP_TRADE_EXECUTED_EVENT.getIndexedParameters().get(2));
+
+        // Decode non-indexed parameters
+        List<Type> nonIndexedValues = FunctionReturnDecoder.decode(eventLog.getData(), ONESWAP_TRADE_EXECUTED_NON_INDEXED_PARAMETERS);
+        Uint256 amountIn = (Uint256) nonIndexedValues.get(0);
+        Uint256 amountOut = (Uint256) nonIndexedValues.get(1);
+        Uint8 exchange = (Uint8) nonIndexedValues.get(2);
+
+//        log.info("=======================OneSwap TradeExecuted event detected=======================");
+//        log.info("Trader: " + trader.getValue());
+//        log.info("[In] token: " + tokenIn.getValue() + " , amount: " + amountIn.getValue());
+//        log.info("[Out] token: " + tokenOut.getValue() + " , amount: " + amountOut.getValue());
+//        log.info("Exchange: " + exchange.getValue());
+
+        User user = User.builder().address(trader.getValue()).build();
+        com.oneswap.model.Transaction transaction = com.oneswap.model.Transaction.builder()
+                .user(user)
+                .transactionHash(eventLog.getTransactionHash())
+                .blockchain(blockchain)
+                .exchanger(exchange.getValue().intValue())
+                .tokenIn(tokenIn.getValue())
+                .tokenOut(tokenOut.getValue())
+                .amountIn(amountIn.getValue())
+                .amountOut(amountOut.getValue())
+                .build();
+        recordService.saveTransaction(transaction);
+    }
+
 
 
 }
