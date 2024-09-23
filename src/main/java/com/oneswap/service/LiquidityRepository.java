@@ -92,6 +92,7 @@ public class LiquidityRepository {
             liquidity.setAmount1(reserve1.add(amount1));
             // save to Redis
             redisUtil.set(key, liquidity, 10, TimeUnit.MINUTES);
+            redisUtil.publish(token0 + ":" + token1, token0 + ":" + token1);
         } catch (Exception e) {
             log.error("Error updating token pair for address {} | {}: {}", token0, token1, e.getMessage(), e);
             return "";

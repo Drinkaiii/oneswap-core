@@ -1,6 +1,8 @@
 package com.oneswap.websocket;
 
+import com.oneswap.model.LimitOrder;
 import com.oneswap.model.Liquidity;
+import com.oneswap.model.Token;
 import com.oneswap.model.User;
 import com.oneswap.service.*;
 import com.oneswap.util.RedisUtil;
@@ -53,16 +55,18 @@ public class InfraWeb3jClient {
     private final LiquidityRepository liquidityRepository;
     private final RecordService recordService;
     private final RedisPublish redisPublish;
+    private final RedisUtil redisUtil;
 
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
     private Set<String> monitoredBalancerPoolAddresses = new HashSet<>();
+    String limitOrderContractAddress = "0x08dfC836a3343618ffB412FFaDF3B882cB98852b";
 
     // save the contracts of all token0 and token1
     private Map<String, String> token0Map = new HashMap<>();
     private Map<String, String> token1Map = new HashMap<>();
 
-    // define SWAP event
+    // define Uniswap V2 Router SWAP event
     private static final Event UNISWAP_SWAP_EVENT = new Event("Swap",
             Arrays.asList(
                     new TypeReference<Address>(true) {
@@ -81,6 +85,7 @@ public class InfraWeb3jClient {
     );
     private static final List<TypeReference<Type>> NON_INDEXED_PARAMETERS = UNISWAP_SWAP_EVENT.getNonIndexedParameters();
 
+    // define Balancer V2 Vault SWAP event
     private static final Event BALANCER_VAULT_SWAP_EVENT = new Event("Swap",
             Arrays.asList(
                     new TypeReference<Bytes32>(true) {
@@ -96,21 +101,67 @@ public class InfraWeb3jClient {
             )
     );
 
+    // define OneSwap SWAP event
     private static final Event ONESWAP_TRADE_EXECUTED_EVENT = new Event("TradeExecuted",
             Arrays.asList(
-                    new TypeReference<Address>(true) {},  // trader
-                    new TypeReference<Address>(true) {},  // tokenIn
-                    new TypeReference<Address>(true) {},  // tokenOut
-                    new TypeReference<Uint256>() {},      // amountIn
-                    new TypeReference<Uint256>() {},      // amountOut
-                    new TypeReference<Uint8>() {}         // exchange (enum type)
+                    new TypeReference<Address>(true) {
+                    },  // trader
+                    new TypeReference<Address>(true) {
+                    },  // tokenIn
+                    new TypeReference<Address>(true) {
+                    },  // tokenOut
+                    new TypeReference<Uint256>() {
+                    },      // amountIn
+                    new TypeReference<Uint256>() {
+                    },      // amountOut
+                    new TypeReference<Uint8>() {
+                    }         // exchange (enum type)
             )
     );
     private static final List<TypeReference<Type>> ONESWAP_TRADE_EXECUTED_NON_INDEXED_PARAMETERS = ONESWAP_TRADE_EXECUTED_EVENT.getNonIndexedParameters();
 
+    // define LimitOrder place event
+    private static final Event ORDER_PLACED_EVENT = new Event("OrderPlaced",
+            Arrays.asList(
+                    new TypeReference<Uint256>(true) {
+                    },  // orderId (indexed)
+                    new TypeReference<Address>(true) {
+                    },  // user (indexed)
+                    new TypeReference<Address>() {
+                    },      // tokenIn
+                    new TypeReference<Address>() {
+                    },      // tokenOut
+                    new TypeReference<Uint256>() {
+                    },      // amountIn
+                    new TypeReference<Uint256>() {
+                    }       // minAmountOut
+            )
+    );
+    // define LimitOrder cancel event
+    private static final Event ORDER_CANCELLED_EVENT = new Event("OrderCancelled",
+            Arrays.asList(
+                    new TypeReference<Uint256>(true) {
+                    },  // orderId (indexed)
+                    new TypeReference<Address>(true) {
+                    }   // user (indexed)
+            )
+    );
+    // define LimitOrder execute event
+    private static final Event ORDER_EXECUTED_EVENT = new Event("OrderExecuted",
+            Arrays.asList(
+                    new TypeReference<Uint256>(true) {
+                    },  // orderId (indexed)
+                    new TypeReference<Address>(true) {
+                    },  // user (indexed)
+                    new TypeReference<Uint256>() {
+                    }       // amountOut
+            )
+    );
+
+
     @PostConstruct
     public void init() throws Exception {
-        if ("Ethereum".equals(blockchain)){
+        if ("Ethereum".equals(blockchain)) {
             uniswapPairAddresses = List.of( // USDT-WETH、WBTC-WETH
                     "0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852",
                     "0xBb2b8038a1640196FbE3e38816F3e67Cba72D940"
@@ -122,12 +173,23 @@ public class InfraWeb3jClient {
                     List.of("0x3de27efa2f1aa663ae5d458857e731c129069f29000200000000000000000588", "0x3de27efa2f1aa663ae5d458857e731c129069f29")
             );
         }
-        if ("Sepolia".equals(blockchain)){
+        if ("Sepolia".equals(blockchain)) {
             uniswapPairAddresses = List.of( // WBTC-WETH
-                    "0x0E5D4672676a325245C483199a717c45A55a63dF"
+                    "0x0E5D4672676a325245C483199a717c45A55a63dF",
+                    "0x5424040284DE28CAC43Da5d6abF668a81218E7CB",
+                    "0xF854391f43b25b3aa500b564EE300926a3590481",
+                    "0x1f6F40e934c31f2a0ce2467fb39723f623196a81",
+                    "0xD03Bd6287F733BA162dBb2A5A4633eC6C4b3b8fF",
+                    "0x968e949ef7926940f8f2C67291E21a183aB0493B"
             );
             balancerPairAddressesAndId = List.of( // WBTC-WETH
-                List.of("0xc1e0942d3babe2ce30a78d0702a8b5ace651505400020000000000000000014d","0xc1e0942D3bABE2CE30a78D0702a8b5AcE6515054")
+                    List.of("0xc1e0942d3babe2ce30a78d0702a8b5ace651505400020000000000000000014d", "0xc1e0942D3bABE2CE30a78D0702a8b5AcE6515054"),
+                    List.of("0x57050c60d9bc41d24d110602a63760294041bd1a00020000000000000000014e", "0x57050c60D9Bc41d24D110602A63760294041bD1a"),
+                    List.of("0x0474b5f33c0aba6bfa3b454c04e76bb823c565a800020000000000000000014f", "0x0474B5F33C0abA6BFa3B454c04e76BB823C565a8"),
+                    List.of("0xf124ed963141f49b13dbbfa00d15f17014886459000200000000000000000150", "0xF124Ed963141f49B13dbBfa00D15F17014886459"),
+                    List.of("0xda2b0e89ec51e5d804037b59084deff8dba49058000200000000000000000151", "0xDa2B0e89EC51e5D804037b59084DeFF8Dba49058"),
+                    List.of("0x0f0d63ef93b65a42f24d4f6710138b81ef96d05b000200000000000000000152", "0x0f0D63eF93B65a42F24d4f6710138b81eF96D05b")
+
             );
         }
 
@@ -236,6 +298,50 @@ public class InfraWeb3jClient {
             log.error("Error while subscribing to TradeExecuted event", error);
         });
         log.info("Subscribed to TradeExecuted events for DexAggregator contract: " + dexAggregatorAddress);
+
+        // listen LimitOrder V1 OrderPlaced event
+        EthFilter orderPlacedFilter = new EthFilter(
+                DefaultBlockParameterName.LATEST,
+                DefaultBlockParameterName.LATEST,
+                limitOrderContractAddress
+        );
+        String orderPlacedEventSignature = EventEncoder.encode(ORDER_PLACED_EVENT);
+        orderPlacedFilter.addSingleTopic(orderPlacedEventSignature);
+        web3j.ethLogFlowable(orderPlacedFilter).subscribe(log -> {
+            processOrderPlacedEvent(log);
+        }, error -> {
+            log.error("Error while subscribing to OrderPlaced event", error);
+        });
+
+        // listen LimitOrder V1 OrderCancelled event
+        EthFilter orderCancelledFilter = new EthFilter(
+                DefaultBlockParameterName.LATEST,
+                DefaultBlockParameterName.LATEST,
+                limitOrderContractAddress
+        );
+        String orderCancelledEventSignature = EventEncoder.encode(ORDER_CANCELLED_EVENT);
+        orderCancelledFilter.addSingleTopic(orderCancelledEventSignature);
+        web3j.ethLogFlowable(orderCancelledFilter).subscribe(log -> {
+            processOrderCancelledEvent(log);
+        }, error -> {
+            log.error("Error while subscribing to OrderCancelled event", error);
+        });
+
+        // listen LimitOrder V1 OrderExecuted event
+        EthFilter orderExecutedFilter = new EthFilter(
+                DefaultBlockParameterName.LATEST,
+                DefaultBlockParameterName.LATEST,
+                limitOrderContractAddress
+        );
+        String orderExecutedEventSignature = EventEncoder.encode(ORDER_EXECUTED_EVENT);
+        orderExecutedFilter.addSingleTopic(orderExecutedEventSignature);
+        web3j.ethLogFlowable(orderExecutedFilter).subscribe(log -> {
+            processOrderExecutedEvent(log);
+        }, error -> {
+            log.error("Error while subscribing to OrderExecuted event", error);
+        });
+
+
     }
 
     private String getToken0(String contractAddress) throws Exception {
@@ -301,8 +407,8 @@ public class InfraWeb3jClient {
                 ? amountBIn.getValue()
                 : amountBOut.getValue().negate();
 
-        String key = liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
-        redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
+        liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
+        //redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
 
         log.info("=======================Uniswap Swap event detected=======================");
         log.info("Swap in monitored pool: " + contractAddress);
@@ -346,8 +452,8 @@ public class InfraWeb3jClient {
             log.info("[In] token: " + tokenIn.getValue() + " , amount: " + amountIn.getValue());
             log.info("[Out] token: " + tokenOut.getValue() + " , amount: " + amountOut.getValue());
             BigInteger tokenAmountOut = amountOut.getValue().negate();
-            String key = liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
-            redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
+            liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
+            //redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
         }
     }
 
@@ -376,19 +482,108 @@ public class InfraWeb3jClient {
 //        log.info("Exchange: " + exchange.getValue());
 
         User user = User.builder().address(trader.getValue()).build();
+        Token tokenInObject = Token.builder().address(tokenIn.getValue()).build();
+        Token tokenOutObject = Token.builder().address(tokenOut.getValue()).build();
         com.oneswap.model.Transaction transaction = com.oneswap.model.Transaction.builder()
                 .user(user)
                 .transactionHash(eventLog.getTransactionHash())
                 .blockchain(blockchain)
                 .exchanger(exchange.getValue().intValue())
-                .tokenIn(tokenIn.getValue())
-                .tokenOut(tokenOut.getValue())
+                .tokenIn(tokenInObject)
+                .tokenOut(tokenOutObject)
                 .amountIn(amountIn.getValue())
                 .amountOut(amountOut.getValue())
                 .build();
         recordService.saveTransaction(transaction);
     }
 
+    private void processOrderPlacedEvent(Log eventLog) {
+        String eventSignature = EventEncoder.encode(ORDER_PLACED_EVENT);
+        if (!eventLog.getTopics().get(0).equals(eventSignature)) {
+            return;
+        }
+
+        // Decode indexed parameters
+        Uint256 orderId = (Uint256) FunctionReturnDecoder.decodeIndexedValue(
+                eventLog.getTopics().get(1), ORDER_PLACED_EVENT.getIndexedParameters().get(0));
+        Address trader = (Address) FunctionReturnDecoder.decodeIndexedValue(
+                eventLog.getTopics().get(2), ORDER_PLACED_EVENT.getIndexedParameters().get(1));
+
+        // Decode non-indexed parameters
+        List<Type> nonIndexedValues = FunctionReturnDecoder.decode(eventLog.getData(), ORDER_PLACED_EVENT.getNonIndexedParameters());
+        Address tokenIn = (Address) nonIndexedValues.get(0);
+        Address tokenOut = (Address) nonIndexedValues.get(1);
+        Uint256 amountIn = (Uint256) nonIndexedValues.get(2);
+        Uint256 minAmountOut = (Uint256) nonIndexedValues.get(3);
+
+        log.info("OrderPlaced event detected:");
+        log.info("OrderId: " + orderId.getValue());
+        log.info("User: " + trader.getValue());
+        log.info("TokenIn: " + tokenIn.getValue());
+        log.info("TokenOut: " + tokenOut.getValue());
+        log.info("AmountIn: " + amountIn.getValue());
+        log.info("MinAmountOut: " + minAmountOut.getValue());
+
+        User user = User.builder().address(trader.getValue()).build();
+        Token tokenInObject = Token.builder().address(tokenIn.getValue()).build();
+        Token tokenOutObject = Token.builder().address(tokenOut.getValue()).build();
+        LimitOrder limitOrder = LimitOrder.builder()
+                .status(LimitOrder.STATUS_UN_FILLED)
+                .orderId(orderId.getValue().longValue())
+                .user(user)
+                .tokenIn(tokenInObject)
+                .tokenOut(tokenOutObject)
+                .amountIn(amountIn.getValue())
+                .minAmountOut(minAmountOut.getValue())
+                .finalAmountOut(BigInteger.ZERO)
+                .build();
+        recordService.saveLimitOrder(limitOrder);
+    }
+
+    private void processOrderCancelledEvent(Log eventLog) {
+        String eventSignature = EventEncoder.encode(ORDER_CANCELLED_EVENT);
+        if (!eventLog.getTopics().get(0).equals(eventSignature)) {
+            return;
+        }
+
+        // Decode indexed parameters
+        Uint256 orderId = (Uint256) FunctionReturnDecoder.decodeIndexedValue(
+                eventLog.getTopics().get(1), ORDER_CANCELLED_EVENT.getIndexedParameters().get(0));
+        Address userAddress = (Address) FunctionReturnDecoder.decodeIndexedValue(
+                eventLog.getTopics().get(2), ORDER_CANCELLED_EVENT.getIndexedParameters().get(1));
+
+        log.info("OrderCancelled event detected:");
+        log.info("OrderId: " + orderId.getValue());
+        log.info("User: " + userAddress.getValue());
+
+        recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_CANCELED);
+
+    }
+
+    private void processOrderExecutedEvent(Log eventLog) {
+        String eventSignature = EventEncoder.encode(ORDER_EXECUTED_EVENT);
+        if (!eventLog.getTopics().get(0).equals(eventSignature)) {
+            return;
+        }
+
+        // Decode indexed parameters
+        Uint256 orderId = (Uint256) FunctionReturnDecoder.decodeIndexedValue(
+                eventLog.getTopics().get(1), ORDER_EXECUTED_EVENT.getIndexedParameters().get(0));
+        Address user = (Address) FunctionReturnDecoder.decodeIndexedValue(
+                eventLog.getTopics().get(2), ORDER_EXECUTED_EVENT.getIndexedParameters().get(1));
+
+        // Decode non-indexed parameters
+        List<Type> nonIndexedValues = FunctionReturnDecoder.decode(eventLog.getData(), ORDER_EXECUTED_EVENT.getNonIndexedParameters());
+        Uint256 amountOut = (Uint256) nonIndexedValues.get(0);
+
+        log.info("OrderExecuted event detected:");
+        log.info("OrderId: " + orderId.getValue());
+        log.info("User: " + user.getValue());
+        log.info("AmountOut: " + amountOut.getValue());
+
+        recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_FILLED);
+
+    }
 
 
 }

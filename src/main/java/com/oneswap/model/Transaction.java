@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
@@ -34,11 +36,13 @@ public class Transaction {
     @Column(name = "exchanger", nullable = false)
     private int exchanger;
 
-    @Column(name = "token_in", nullable = false)
-    private String tokenIn;
+    @ManyToOne
+    @JoinColumn(name = "token_in", nullable = false)
+    private Token tokenIn;
 
-    @Column(name = "token_out", nullable = false)
-    private String tokenOut;
+    @ManyToOne
+    @JoinColumn(name = "token_out", nullable = false)
+    private Token tokenOut;
 
     @Column(name = "amount_in", precision = 65, scale = 0, nullable = false)
     private BigInteger amountIn;
@@ -46,7 +50,12 @@ public class Transaction {
     @Column(name = "amount_out", precision = 65, scale = 0, nullable = false)
     private BigInteger amountOut;
 
-    @Column(name = "created_at", updatable = false, insertable = false)
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
 }
