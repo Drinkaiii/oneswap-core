@@ -516,7 +516,7 @@ public class InfraWeb3jClient {
         Uint256 amountIn = (Uint256) nonIndexedValues.get(2);
         Uint256 minAmountOut = (Uint256) nonIndexedValues.get(3);
 
-        log.info("OrderPlaced event detected:");
+        log.info("=======================OrderPlaced event detected=======================");
         log.info("OrderId: " + orderId.getValue());
         log.info("User: " + trader.getValue());
         log.info("TokenIn: " + tokenIn.getValue());
@@ -552,7 +552,7 @@ public class InfraWeb3jClient {
         Address userAddress = (Address) FunctionReturnDecoder.decodeIndexedValue(
                 eventLog.getTopics().get(2), ORDER_CANCELLED_EVENT.getIndexedParameters().get(1));
 
-        log.info("OrderCancelled event detected:");
+        log.info("=======================OrderCancelled event detected=======================");
         log.info("OrderId: " + orderId.getValue());
         log.info("User: " + userAddress.getValue());
 
@@ -576,7 +576,7 @@ public class InfraWeb3jClient {
         List<Type> nonIndexedValues = FunctionReturnDecoder.decode(eventLog.getData(), ORDER_EXECUTED_EVENT.getNonIndexedParameters());
         Uint256 amountOut = (Uint256) nonIndexedValues.get(0);
 
-        log.info("OrderExecuted event detected:");
+        log.info("=======================OrderExecuted event detected=======================");
         log.info("OrderId: " + orderId.getValue());
         log.info("User: " + user.getValue());
         log.info("AmountOut: " + amountOut.getValue());
