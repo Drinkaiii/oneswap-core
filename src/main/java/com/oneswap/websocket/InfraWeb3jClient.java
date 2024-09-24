@@ -8,6 +8,7 @@ import com.oneswap.service.*;
 import com.oneswap.util.RedisUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,8 +45,8 @@ public class InfraWeb3jClient {
 
     @Value("${blockchain}")
     private String blockchain;
-    @Value("${ONESWAP_V1_SEPOLIA_ADDRESS}")
-    private String ONESWAP_V1_SEPOLIA_ADDRESS; // todo make network change infra
+    @Value("${ONESWAP_V1_AGGREGATOR_SEPOLIA_ADDRESS}")
+    private String ONESWAP_V1_AGGREGATOR_ADDRESS; // todo make network change infra
 
     @Autowired
     @Qualifier("web3jWebsocket")
@@ -54,8 +55,7 @@ public class InfraWeb3jClient {
     private final BalancerService balancerService;
     private final LiquidityRepository liquidityRepository;
     private final RecordService recordService;
-    private final RedisPublish redisPublish;
-    private final RedisUtil redisUtil;
+    private final LimitOrderService limitOrderService;
 
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
@@ -284,7 +284,7 @@ public class InfraWeb3jClient {
         });
 
         // listen Oneswap V1 SWAP event
-        String dexAggregatorAddress = ONESWAP_V1_SEPOLIA_ADDRESS;
+        String dexAggregatorAddress = ONESWAP_V1_AGGREGATOR_ADDRESS;
         EthFilter oneswapTradeExecutedFilter = new EthFilter(
                 DefaultBlockParameterName.LATEST,
                 DefaultBlockParameterName.LATEST,
@@ -372,7 +372,8 @@ public class InfraWeb3jClient {
         return decodedResponse.get(0).getValue().toString();
     }
 
-    private void processUniswapSwapEvent(Log eventLog) {
+    @Transactional
+    public void processUniswapSwapEvent(Log eventLog) {
 
         String contractAddress = eventLog.getAddress();
 
@@ -407,8 +408,7 @@ public class InfraWeb3jClient {
                 ? amountBIn.getValue()
                 : amountBOut.getValue().negate();
 
-        liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
-        //redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
+        Liquidity liquidity = liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
 
         log.info("=======================Uniswap Swap event detected=======================");
         log.info("Swap in monitored pool: " + contractAddress);
@@ -420,6 +420,21 @@ public class InfraWeb3jClient {
             log.info("[In] token: " + tokenB + " , amount: " + amountB);
         else
             log.info("[Out] token: " + tokenB + " , amount: " + amountB.negate());
+
+        // find match limit orders
+        List<LimitOrder> matchingOrders = limitOrderService.findMatchOrder(liquidity);
+        for (LimitOrder order : matchingOrders) {
+            log.info(order.toString());
+            // execute the limit order
+            String hash = null;
+            try {
+                hash = limitOrderService.execute(order);
+                log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
+            } catch (Exception e) {
+                log.warn("Order executed failed: " + order.getOrderId());
+            }
+        }
+
 
     }
 
@@ -452,8 +467,21 @@ public class InfraWeb3jClient {
             log.info("[In] token: " + tokenIn.getValue() + " , amount: " + amountIn.getValue());
             log.info("[Out] token: " + tokenOut.getValue() + " , amount: " + amountOut.getValue());
             BigInteger tokenAmountOut = amountOut.getValue().negate();
-            liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
-            //redisPublish.publish(RedisPublish.LIQUIDITY_TOPIC, key);
+            Liquidity liquidity = liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
+
+            // find match limit orders
+            List<LimitOrder> matchingOrders = limitOrderService.findMatchOrder(liquidity);
+            for (LimitOrder order : matchingOrders) {
+                // execute the limit order
+                String hash = null;
+                try {
+                    hash = limitOrderService.execute(order);
+                    log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
+                } catch (Exception e) {
+                    log.warn("Order executed failed: " + order.getOrderId());
+                }
+            }
+
         }
     }
 

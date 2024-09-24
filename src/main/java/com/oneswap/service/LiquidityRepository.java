@@ -5,6 +5,7 @@ import com.oneswap.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigInteger;
@@ -60,7 +61,8 @@ public class LiquidityRepository {
         return key;
     }
 
-    public String updateTokenPair(String tokenA, String tokenB, BigInteger amountA, BigInteger amountB, String exchanger) {
+    @Nullable
+    public Liquidity updateTokenPair(String tokenA, String tokenB, BigInteger amountA, BigInteger amountB, String exchanger) {
 
         // 根據 tokenA 和 tokenB 的顺序确定 token0 和 token1
         String token0, token1;
@@ -80,11 +82,12 @@ public class LiquidityRepository {
         // combine two token address as key
         String key = "liquidity:" + token0 + ":" + token1 + ":" + exchanger + ":" + blockchain;
         // update data
+        Liquidity liquidity;
         try {
             // get data from Redis
-            Liquidity liquidity = redisUtil.get(key, Liquidity.class);
+            liquidity = redisUtil.get(key, Liquidity.class);
             if (liquidity == null)//TODO
-                return "";
+                return null;
             // update data
             BigInteger reserve0 = new BigInteger(liquidity.getAmount0().toString());
             BigInteger reserve1 = new BigInteger(liquidity.getAmount1().toString());
@@ -95,8 +98,8 @@ public class LiquidityRepository {
             redisUtil.publish(token0 + ":" + token1, token0 + ":" + token1);
         } catch (Exception e) {
             log.error("Error updating token pair for address {} | {}: {}", token0, token1, e.getMessage(), e);
-            return "";
+            return null;
         }
-        return key;
+        return liquidity;
     }
 }
