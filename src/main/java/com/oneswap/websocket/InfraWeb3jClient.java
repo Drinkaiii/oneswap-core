@@ -556,7 +556,7 @@ public class InfraWeb3jClient {
         log.info("OrderId: " + orderId.getValue());
         log.info("User: " + userAddress.getValue());
 
-        recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_CANCELED);
+        recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_CANCELED, BigInteger.ZERO);
 
     }
 
@@ -581,7 +581,7 @@ public class InfraWeb3jClient {
         log.info("User: " + user.getValue());
         log.info("AmountOut: " + amountOut.getValue());
 
-        recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_FILLED);
+        recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_FILLED, amountOut.getValue());
 
     }
 

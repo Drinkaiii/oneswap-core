@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigInteger;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -78,12 +80,14 @@ public class RecordService {
         return limitOrderRepository.save(limitOrder);
     }
 
-    public LimitOrder updateLimitOrder(long orderId, String newStatus) {
+    public LimitOrder updateLimitOrder(long orderId, String newStatus, BigInteger finalAmountOut) {
 
         LimitOrder limitOrder = limitOrderRepository.findByOrderId(orderId);
         if (limitOrder == null)
             throw new IllegalArgumentException("Order with ID " + orderId + " not found.");
 
+        if (LimitOrder.STATUS_FILLED.equals(newStatus))
+            limitOrder.setFinalAmountOut(finalAmountOut);
         limitOrder.setStatus(newStatus);
 
         return limitOrderRepository.save(limitOrder);
