@@ -86,7 +86,6 @@ public class LimitOrderService {
             BigInteger resultAmount = calculateAmount(reserveIn, reserveOut, amountIn);
             // check liquidity enough
             if (resultAmount.compareTo(minAmountOut) < 0) {
-                log.info("skip the pool: The reserve amount is greater than the reserve amount");
                 // skip the pool
                 continue;
             }
@@ -164,7 +163,7 @@ public class LimitOrderService {
         // send the transaction
         String hash = web3TransactionUtil.send(transaction);
 
-        log.info("Transaction was done!! The tx is:");
+        log.info("Transaction was done!! The tx is:" + hash);
         return hash;
 
     }
