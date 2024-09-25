@@ -111,6 +111,7 @@ public class BalancerService {
         liquidity.setExchanger("Balancer");
         liquidity.setAlgorithm("Weighted");
         liquidity.setWeight(1); // TODO: 設定真實權重
+        liquidity.setPoolId(poolId);
         return liquidity;
     }
 

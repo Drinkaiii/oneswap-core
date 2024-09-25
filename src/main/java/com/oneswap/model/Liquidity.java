@@ -21,5 +21,6 @@ public class Liquidity {
     private String exchanger;
     private String algorithm;
     private double weight;
+    private String poolId;
 
 }
