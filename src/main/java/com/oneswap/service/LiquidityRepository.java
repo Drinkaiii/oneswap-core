@@ -26,13 +26,12 @@ public class LiquidityRepository {
 
     public String saveTokenPair(Liquidity liquidity) {
 
-        // 暂时使用 tokenA 和 tokenB
         String tokenA = liquidity.getToken0();
         String tokenB = liquidity.getToken1();
         BigInteger amountA = liquidity.getAmount0();
         BigInteger amountB = liquidity.getAmount1();
 
-        // 根據 tokenA 和 tokenB 的顺序确定 token0 和 token1
+        // comfirm token0 and token1
         String token0, token1;
         BigInteger amount0, amount1;
 
@@ -64,7 +63,7 @@ public class LiquidityRepository {
     @Nullable
     public Liquidity updateTokenPair(String tokenA, String tokenB, BigInteger amountA, BigInteger amountB, String exchanger) {
 
-        // 根據 tokenA 和 tokenB 的顺序确定 token0 和 token1
+        // comfirm token0 and token1
         String token0, token1;
         BigInteger amount0, amount1;
         if (tokenA.compareTo(tokenB) < 0) {

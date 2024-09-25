@@ -174,7 +174,7 @@ public class InfraWeb3jClient {
             );
         }
         if ("Sepolia".equals(blockchain)) {
-            uniswapPairAddresses = List.of( // WBTC-WETH
+            uniswapPairAddresses = List.of( // WBTC-WETH、WETH-USDT、WETH-ZYBD、WBTC-USDT、WBTC-ZYBD、USDT-ZYBD
                     "0x0E5D4672676a325245C483199a717c45A55a63dF",
                     "0x5424040284DE28CAC43Da5d6abF668a81218E7CB",
                     "0xF854391f43b25b3aa500b564EE300926a3590481",
@@ -182,7 +182,7 @@ public class InfraWeb3jClient {
                     "0xD03Bd6287F733BA162dBb2A5A4633eC6C4b3b8fF",
                     "0x968e949ef7926940f8f2C67291E21a183aB0493B"
             );
-            balancerPairAddressesAndId = List.of( // WBTC-WETH
+            balancerPairAddressesAndId = List.of( // WBTC-WETH、WETH-USDT、WETH-ZYBD、WBTC-USDT、WBTC-ZYBD、USDT-ZYBD
                     List.of("0xc1e0942d3babe2ce30a78d0702a8b5ace651505400020000000000000000014d", "0xc1e0942D3bABE2CE30a78D0702a8b5AcE6515054"),
                     List.of("0x57050c60d9bc41d24d110602a63760294041bd1a00020000000000000000014e", "0x57050c60D9Bc41d24D110602A63760294041bD1a"),
                     List.of("0x0474b5f33c0aba6bfa3b454c04e76bb823c565a800020000000000000000014f", "0x0474B5F33C0abA6BFa3B454c04e76BB823C565a8"),
