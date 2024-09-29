@@ -95,24 +95,27 @@ public class LimitOrderService {
     }
 
     // send the executed limit order transaction
-    public String execute(LimitOrder limitOrder) throws Exception {
-
-        // parameter
-        String poolId = "0xc1e0942d3babe2ce30a78d0702a8b5ace651505400020000000000000000014d";
+    public String execute(LimitOrder limitOrder, Liquidity liquidity) throws Exception {
 
         // prepare data about address and credentials
         Credentials credentials = Credentials.create(BOT_WALLET_PRIVATE_KEY);
         OneswapLimitOrder forEstimateContract = OneswapLimitOrder.load(oneswapV1LimitOrderAddress, web3j, credentials, gasProvider);
 
-        // todo
         // prepare transaction parameters for estimate
         BigInteger orderId = BigInteger.valueOf(limitOrder.getOrderId());
         List<String> path = Arrays.asList(limitOrder.getTokenIn().getAddress(), limitOrder.getTokenOut().getAddress());
-        BigInteger exchange = BigInteger.valueOf(0);
+        BigInteger exchange = BigInteger.ZERO; // default is 0
+        if ("Uniswap".equals(liquidity.getExchanger())) {
+            exchange = BigInteger.ZERO; // Uniswap is 0
+        } else if ("Balancer".equals(liquidity.getExchanger())) {
+            exchange = BigInteger.ONE; // Balancer is 1
+        }
+        String poolId = liquidity.getPoolId() == null ? "" : liquidity.getPoolId();
         if (poolId.startsWith("0x"))
             poolId = poolId.substring(2);
         byte[] poolIdBytes = Numeric.hexStringToByteArray(poolId);
 
+        // send the transaction
         RemoteFunctionCall<TransactionReceipt> forEstimateCall = forEstimateContract.executeOrder(
                 orderId,
                 path,

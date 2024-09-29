@@ -428,7 +428,8 @@ public class InfraWeb3jClient {
             // execute the limit order
             String hash = null;
             try {
-                hash = limitOrderService.execute(order);
+                // execute the order by the newest liquidity info
+                hash = limitOrderService.execute(order, liquidity);
                 log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
             } catch (Exception e) {
                 log.warn("Order executed failed: " + order.getOrderId());
@@ -475,7 +476,8 @@ public class InfraWeb3jClient {
                 // execute the limit order
                 String hash = null;
                 try {
-                    hash = limitOrderService.execute(order);
+                    // execute the order by the newest liquidity info
+                    hash = limitOrderService.execute(order, liquidity);
                     log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
                 } catch (Exception e) {
                     log.warn("Order executed failed: " + order.getOrderId());

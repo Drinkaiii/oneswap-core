@@ -56,7 +56,7 @@ public class LiquidityRepository {
         liquidity.setAmount1(amount1);
 
         // save to Redis
-        redisUtil.set(key, liquidity, 10, TimeUnit.MINUTES);
+        redisUtil.set(key, liquidity, 1000, TimeUnit.MINUTES);
         return key;
     }
 
@@ -93,7 +93,7 @@ public class LiquidityRepository {
             liquidity.setAmount0(reserve0.add(amount0));
             liquidity.setAmount1(reserve1.add(amount1));
             // save to Redis
-            redisUtil.set(key, liquidity, 10, TimeUnit.MINUTES);
+            redisUtil.set(key, liquidity, 1000, TimeUnit.MINUTES);
             redisUtil.publish(token0 + ":" + token1, token0 + ":" + token1);
         } catch (Exception e) {
             log.error("Error updating token pair for address {} | {}: {}", token0, token1, e.getMessage(), e);
