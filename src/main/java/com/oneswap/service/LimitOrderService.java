@@ -1,7 +1,7 @@
 package com.oneswap.service;
 
 import com.oneswap.abi.OneswapLimitOrder;
-import com.oneswap.bot.CustomGasProvider;
+import com.oneswap.model.CustomGasProvider;
 import com.oneswap.model.LimitOrder;
 import com.oneswap.model.Liquidity;
 import com.oneswap.model.Token;
