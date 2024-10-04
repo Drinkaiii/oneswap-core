@@ -9,6 +9,8 @@ import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigInteger;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Repository
@@ -94,7 +96,8 @@ public class LiquidityRepository {
             liquidity.setAmount1(reserve1.add(amount1));
             // save to Redis
             redisUtil.set(key, liquidity, 1000, TimeUnit.MINUTES);
-            redisUtil.publish(token0 + ":" + token1, token0 + ":" + token1);
+            Map<String,String> data = Map.of("type","liquidity","data",token0 + ":" + token1);
+            redisUtil.publish(token0 + ":" + token1, data);
         } catch (Exception e) {
             log.error("Error updating token pair for address {} | {}: {}", token0, token1, e.getMessage(), e);
             return null;

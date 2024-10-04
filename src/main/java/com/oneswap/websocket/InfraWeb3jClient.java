@@ -31,11 +31,15 @@ import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.EthFilter;
 import org.web3j.protocol.core.methods.request.Transaction;
+import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.Log;
+import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.util.*;
 
 @Component
@@ -56,6 +60,7 @@ public class InfraWeb3jClient {
     private final LiquidityRepository liquidityRepository;
     private final RecordService recordService;
     private final LimitOrderService limitOrderService;
+    private final NetworkService networkService;
 
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
@@ -198,6 +203,7 @@ public class InfraWeb3jClient {
             monitoredBalancerPoolAddresses.add(contractAddress.toLowerCase());
         }
 
+        subscribeToNewBlocks();
         fetchInitialReserves();
         subscribeToContractEvents();
     }
@@ -214,6 +220,34 @@ public class InfraWeb3jClient {
             web3j.shutdown();
             log.info("Web3j connection closed.");
         }
+    }
+
+    private void subscribeToNewBlocks() {
+        web3j.blockFlowable(false).subscribe(block -> {
+            EthBlock.Block b = block.getBlock();
+            BigInteger gasPrice = b.getBaseFeePerGas();
+            if (gasPrice != null) {
+                networkService.saveGasFee(gasPrice);
+                logGasPrice(gasPrice);
+            }
+        }, error -> {
+            log.error("Error in block subscription", error);
+        });
+    }
+
+    private void logGasPrice(BigInteger gasPriceWei) {
+        BigDecimal gasPriceGwei = Convert.fromWei(new BigDecimal(gasPriceWei), Convert.Unit.GWEI);
+
+        String gasPriceLevel;
+        if (gasPriceGwei.compareTo(BigDecimal.valueOf(30)) < 0) {
+            gasPriceLevel = "Low";
+        } else if (gasPriceGwei.compareTo(BigDecimal.valueOf(60)) < 0) {
+            gasPriceLevel = "Medium";
+        } else {
+            gasPriceLevel = "High";
+        }
+
+        log.info("Current Gas Price: {} Gwei ({})", gasPriceGwei.setScale(2, RoundingMode.HALF_UP), gasPriceLevel);
     }
 
     private void fetchInitialReserves() {
