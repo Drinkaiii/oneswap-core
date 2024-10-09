@@ -467,6 +467,7 @@ public class InfraWeb3jClient {
                 log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
             } catch (Exception e) {
                 log.warn("Order executed failed: " + order.getOrderId());
+                log.warn(e);
             }
         }
 
@@ -515,6 +516,7 @@ public class InfraWeb3jClient {
                     log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
                 } catch (Exception e) {
                     log.warn("Order executed failed: " + order.getOrderId());
+                    log.warn(e);
                 }
             }
 
