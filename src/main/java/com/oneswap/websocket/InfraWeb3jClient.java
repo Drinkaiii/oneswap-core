@@ -209,7 +209,7 @@ public class InfraWeb3jClient {
     }
 
     // Every 600 seconds refresh data
-    @Scheduled(fixedRate = 60000 * 10)
+    @Scheduled(fixedRate = 60000 * 10 * 4)
     public void resynchronizeReserves() {
         fetchInitialReserves();
     }
