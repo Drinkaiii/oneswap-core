@@ -113,7 +113,12 @@ public class LimitOrderService {
         String poolId = liquidity.getPoolId() == null ? "" : liquidity.getPoolId();
         if (poolId.startsWith("0x"))
             poolId = poolId.substring(2);
-        byte[] poolIdBytes = Numeric.hexStringToByteArray(poolId);
+        byte[] poolIdBytes;
+        if (poolId.isEmpty()) {
+            poolIdBytes = new byte[32]; // or whatever default length is expected
+        } else {
+            poolIdBytes = Numeric.hexStringToByteArray(poolId);
+        }
 
         // send the transaction
         RemoteFunctionCall<TransactionReceipt> forEstimateCall = forEstimateContract.executeOrder(

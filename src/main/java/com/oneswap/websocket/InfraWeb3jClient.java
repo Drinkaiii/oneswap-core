@@ -209,7 +209,7 @@ public class InfraWeb3jClient {
     }
 
     // Every 600 seconds refresh data
-    @Scheduled(fixedRate = 60000 * 10)
+    @Scheduled(fixedRate = 60000 * 10 * 4)
     public void resynchronizeReserves() {
         fetchInitialReserves();
     }
@@ -247,7 +247,7 @@ public class InfraWeb3jClient {
             gasPriceLevel = "High";
         }
 
-        log.info("Current Gas Price: {} Gwei ({})", gasPriceGwei.setScale(2, RoundingMode.HALF_UP), gasPriceLevel);
+        //log.info("Current Gas Price: {} Gwei ({})", gasPriceGwei.setScale(2, RoundingMode.HALF_UP), gasPriceLevel);
     }
 
     private void fetchInitialReserves() {
@@ -458,7 +458,6 @@ public class InfraWeb3jClient {
         // find match limit orders
         List<LimitOrder> matchingOrders = limitOrderService.findMatchOrder(liquidity);
         for (LimitOrder order : matchingOrders) {
-            log.info(order.toString());
             // execute the limit order
             String hash = null;
             try {
@@ -467,6 +466,7 @@ public class InfraWeb3jClient {
                 log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
             } catch (Exception e) {
                 log.warn("Order executed failed: " + order.getOrderId());
+                log.warn(e);
             }
         }
 
@@ -515,6 +515,7 @@ public class InfraWeb3jClient {
                     log.info("Order executed: " + order.getOrderId() + " , hash: " + hash);
                 } catch (Exception e) {
                     log.warn("Order executed failed: " + order.getOrderId());
+                    log.warn(e);
                 }
             }
 
