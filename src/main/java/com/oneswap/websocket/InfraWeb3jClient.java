@@ -247,7 +247,7 @@ public class InfraWeb3jClient {
             gasPriceLevel = "High";
         }
 
-        log.info("Current Gas Price: {} Gwei ({})", gasPriceGwei.setScale(2, RoundingMode.HALF_UP), gasPriceLevel);
+        //log.info("Current Gas Price: {} Gwei ({})", gasPriceGwei.setScale(2, RoundingMode.HALF_UP), gasPriceLevel);
     }
 
     private void fetchInitialReserves() {
@@ -458,7 +458,6 @@ public class InfraWeb3jClient {
         // find match limit orders
         List<LimitOrder> matchingOrders = limitOrderService.findMatchOrder(liquidity);
         for (LimitOrder order : matchingOrders) {
-            log.info(order.toString());
             // execute the limit order
             String hash = null;
             try {
