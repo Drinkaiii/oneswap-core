@@ -62,6 +62,9 @@ public class InfraWeb3jClient {
     private final LimitOrderService limitOrderService;
     private final NetworkService networkService;
 
+    // system control
+    private boolean start = false;
+
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
     private Set<String> monitoredBalancerPoolAddresses = new HashSet<>();
@@ -163,8 +166,27 @@ public class InfraWeb3jClient {
             )
     );
 
+    public void setMonitoring(boolean start) {
 
-    @PostConstruct
+        if (this.start == start) {
+            log.info("WebSocket monitoring is already " + (start ? "started" : "stopped") + ".");
+            return;
+        }
+
+        this.start = start;
+        if (start) {
+            try {
+                init();
+                log.info("WebSocket monitoring started.");
+            } catch (Exception e) {
+                log.error("Error while starting WebSocket monitoring", e);
+            }
+        } else {
+            close();
+            log.info("WebSocket monitoring stopped.");
+        }
+    }
+
     public void init() throws Exception {
         if ("Ethereum".equals(blockchain)) {
             uniswapPairAddresses = List.of( // USDT-WETH、WBTC-WETH
@@ -211,6 +233,7 @@ public class InfraWeb3jClient {
     // Every 600 seconds refresh data
     @Scheduled(fixedRate = 60000 * 10 * 4)
     public void resynchronizeReserves() {
+        if (!start) return;
         fetchInitialReserves();
     }
 
