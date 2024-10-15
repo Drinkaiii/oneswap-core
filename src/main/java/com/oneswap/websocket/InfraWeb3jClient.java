@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
@@ -52,9 +53,9 @@ public class InfraWeb3jClient {
     @Value("${ONESWAP_V1_AGGREGATOR_SEPOLIA_ADDRESS}")
     private String ONESWAP_V1_AGGREGATOR_ADDRESS; // todo make network change infra
 
-    @Autowired
     @Qualifier("web3jWebsocket")
     private Web3j web3j;
+    private final ApplicationContext applicationContext;
     private final UniswapService uniswapService;
     private final BalancerService balancerService;
     private final LiquidityRepository liquidityRepository;
@@ -176,6 +177,9 @@ public class InfraWeb3jClient {
         this.start = start;
         if (start) {
             try {
+                if (web3j == null) {
+                    web3j = applicationContext.getBean("web3jWebsocket", Web3j.class);
+                }
                 init();
                 log.info("WebSocket monitoring started.");
             } catch (Exception e) {

@@ -3,6 +3,7 @@ package com.oneswap.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.methods.response.NetVersion;
 import org.web3j.protocol.http.HttpService;
@@ -29,6 +30,7 @@ public class Web3jConfig {
     private String blockchain;
 
     @Bean
+    @Lazy
     public Web3j web3jWebsocket() throws IOException {
         WebSocketService webSocketService;
         switch (blockchain) {
