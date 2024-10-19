@@ -1,4 +1,4 @@
-package com.oneswap.service;
+package com.oneswap.pubsub;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.RedisTemplate;

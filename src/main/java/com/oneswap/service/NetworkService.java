@@ -1,5 +1,6 @@
 package com.oneswap.service;
 
+import com.oneswap.repository.impl.NetworkRepository;
 import com.oneswap.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -15,20 +16,12 @@ import java.util.concurrent.TimeUnit;
 @Log4j2
 public class NetworkService {
 
-    @Value("${blockchain}")
-    private String blockchain;
-
-    private final RedisUtil redisUtil;
+    private final NetworkRepository networkRepository;
 
     public void saveGasFee(BigInteger gasPrice) {
 
-        // save to Redis
-        redisUtil.set("gas:" + blockchain, gasPrice, 1000, TimeUnit.MINUTES);
+        networkRepository.saveGasFee(gasPrice);
 
-        // Pub/Sub
-        Map<String, String> data = Map.of("type", "gas", "data", gasPrice.toString());
-        redisUtil.publish("gas:" + blockchain, data);
     }
-
 
 }
