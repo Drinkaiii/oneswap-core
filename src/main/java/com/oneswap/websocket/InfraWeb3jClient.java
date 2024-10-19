@@ -1,5 +1,6 @@
 package com.oneswap.websocket;
 
+import com.oneswap.abi.EventConstants;
 import com.oneswap.model.LimitOrder;
 import com.oneswap.model.Liquidity;
 import com.oneswap.model.Token;
@@ -74,96 +75,19 @@ public class InfraWeb3jClient {
     private Map<String, String> token1Map = new HashMap<>();
 
     // define Uniswap V2 Router SWAP event
-    private static final Event UNISWAP_SWAP_EVENT = new Event("Swap",
-            Arrays.asList(
-                    new TypeReference<Address>(true) {
-                    },    // indexed sender
-                    new TypeReference<Uint256>() {
-                    },        // amount0In
-                    new TypeReference<Uint256>() {
-                    },        // amount1In
-                    new TypeReference<Uint256>() {
-                    },        // amount0Out
-                    new TypeReference<Uint256>() {
-                    },        // amount1Out
-                    new TypeReference<Address>(true) {
-                    }     // indexed to
-            )
-    );
+    private static final Event UNISWAP_SWAP_EVENT = EventConstants.UNISWAP_SWAP_EVENT;
     private static final List<TypeReference<Type>> NON_INDEXED_PARAMETERS = UNISWAP_SWAP_EVENT.getNonIndexedParameters();
-
     // define Balancer V2 Vault SWAP event
-    private static final Event BALANCER_VAULT_SWAP_EVENT = new Event("Swap",
-            Arrays.asList(
-                    new TypeReference<Bytes32>(true) {
-                    }, // poolId
-                    new TypeReference<Address>(true) {
-                    }, // tokenIn
-                    new TypeReference<Address>(true) {
-                    }, // tokenOut
-                    new TypeReference<Uint256>() {
-                    },     // amountIn
-                    new TypeReference<Uint256>() {
-                    }      // amountOut
-            )
-    );
-
+    private static final Event BALANCER_VAULT_SWAP_EVENT = EventConstants.BALANCER_VAULT_SWAP_EVENT;
     // define OneSwap SWAP event
-    private static final Event ONESWAP_TRADE_EXECUTED_EVENT = new Event("TradeExecuted",
-            Arrays.asList(
-                    new TypeReference<Address>(true) {
-                    },  // trader
-                    new TypeReference<Address>(true) {
-                    },  // tokenIn
-                    new TypeReference<Address>(true) {
-                    },  // tokenOut
-                    new TypeReference<Uint256>() {
-                    },      // amountIn
-                    new TypeReference<Uint256>() {
-                    },      // amountOut
-                    new TypeReference<Uint8>() {
-                    }         // exchange (enum type)
-            )
-    );
+    private static final Event ONESWAP_TRADE_EXECUTED_EVENT = EventConstants.ONESWAP_TRADE_EXECUTED_EVENT;
     private static final List<TypeReference<Type>> ONESWAP_TRADE_EXECUTED_NON_INDEXED_PARAMETERS = ONESWAP_TRADE_EXECUTED_EVENT.getNonIndexedParameters();
-
     // define LimitOrder place event
-    private static final Event ORDER_PLACED_EVENT = new Event("OrderPlaced",
-            Arrays.asList(
-                    new TypeReference<Uint256>(true) {
-                    },  // orderId (indexed)
-                    new TypeReference<Address>(true) {
-                    },  // user (indexed)
-                    new TypeReference<Address>() {
-                    },      // tokenIn
-                    new TypeReference<Address>() {
-                    },      // tokenOut
-                    new TypeReference<Uint256>() {
-                    },      // amountIn
-                    new TypeReference<Uint256>() {
-                    }       // minAmountOut
-            )
-    );
+    private static final Event ORDER_PLACED_EVENT = EventConstants.ORDER_PLACED_EVENT;
     // define LimitOrder cancel event
-    private static final Event ORDER_CANCELLED_EVENT = new Event("OrderCancelled",
-            Arrays.asList(
-                    new TypeReference<Uint256>(true) {
-                    },  // orderId (indexed)
-                    new TypeReference<Address>(true) {
-                    }   // user (indexed)
-            )
-    );
+    private static final Event ORDER_CANCELLED_EVENT = EventConstants.ORDER_CANCELLED_EVENT;
     // define LimitOrder execute event
-    private static final Event ORDER_EXECUTED_EVENT = new Event("OrderExecuted",
-            Arrays.asList(
-                    new TypeReference<Uint256>(true) {
-                    },  // orderId (indexed)
-                    new TypeReference<Address>(true) {
-                    },  // user (indexed)
-                    new TypeReference<Uint256>() {
-                    }       // amountOut
-            )
-    );
+    private static final Event ORDER_EXECUTED_EVENT = EventConstants.ORDER_EXECUTED_EVENT;
 
     public void setMonitoring(boolean start) {
 
