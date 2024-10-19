@@ -1,6 +1,7 @@
 package com.oneswap.repository.impl;
 
 import com.oneswap.model.Liquidity;
+import com.oneswap.repository.LiquidityRepository;
 import com.oneswap.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
@@ -15,7 +16,7 @@ import java.util.concurrent.TimeUnit;
 @Repository
 @RequiredArgsConstructor
 @Log4j2
-public class LiquidityRepository {
+public class LiquidityRepositoryImpl implements LiquidityRepository {
 
     @Value("${blockchain}")
     private String blockchain;

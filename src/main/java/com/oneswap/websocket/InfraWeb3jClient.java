@@ -4,7 +4,8 @@ import com.oneswap.model.LimitOrder;
 import com.oneswap.model.Liquidity;
 import com.oneswap.model.Token;
 import com.oneswap.model.User;
-import com.oneswap.repository.impl.LiquidityRepository;
+import com.oneswap.repository.LiquidityRepository;
+import com.oneswap.repository.impl.LiquidityRepositoryImpl;
 import com.oneswap.service.*;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
@@ -466,7 +467,7 @@ public class InfraWeb3jClient {
                 ? amountBIn.getValue()
                 : amountBOut.getValue().negate();
 
-        Liquidity liquidity = liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepository.EXCHANGER_UNISWAP);
+        Liquidity liquidity = liquidityRepository.updateTokenPair(tokenA, tokenB, amountA, amountB, LiquidityRepositoryImpl.EXCHANGER_UNISWAP);
 
         log.info("=======================Uniswap Swap event detected=======================");
         log.info("Swap in monitored pool: " + contractAddress);
@@ -526,7 +527,7 @@ public class InfraWeb3jClient {
             log.info("[In] token: " + tokenIn.getValue() + " , amount: " + amountIn.getValue());
             log.info("[Out] token: " + tokenOut.getValue() + " , amount: " + amountOut.getValue());
             BigInteger tokenAmountOut = amountOut.getValue().negate();
-            Liquidity liquidity = liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepository.EXCHANGER_BALANCER);
+            Liquidity liquidity = liquidityRepository.updateTokenPair(tokenIn.getValue(), tokenOut.getValue(), amountIn.getValue(), tokenAmountOut, LiquidityRepositoryImpl.EXCHANGER_BALANCER);
 
             // find match limit orders
             List<LimitOrder> matchingOrders = limitOrderService.findMatchOrder(liquidity);
