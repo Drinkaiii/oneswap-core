@@ -5,11 +5,8 @@ import com.oneswap.model.Liquidity;
 import com.oneswap.model.Token;
 import com.oneswap.model.User;
 import com.oneswap.service.*;
-import com.oneswap.util.RedisUtil;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -40,7 +37,6 @@ import org.web3j.utils.Numeric;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.math.RoundingMode;
 import java.util.*;
 
 @Component

@@ -83,16 +83,13 @@ public class UniswapService {
                 Collections.singletonList(new TypeReference<org.web3j.abi.datatypes.Address>() {})
         );
 
-        // 编码并发送调用请求
         String encodedFunction = FunctionEncoder.encode(function);
         Transaction transaction = Transaction.createEthCallTransaction(null, contractAddress, encodedFunction);
         EthCall response = web3j.ethCall(transaction, DefaultBlockParameterName.LATEST).send();
 
-        // 检查响应是否正常
         if (response.isReverted())
             throw new RuntimeException("Error calling " + tokenFunction + ": " + response.getRevertReason());
 
-        // 解码并返回 token 地址
         List<Type> decodedResponse = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
         return (String) decodedResponse.get(0).getValue();
     }
