@@ -61,12 +61,10 @@ public class BlockchainEventSubscriber {
 
     // define Uniswap V2 Router SWAP event
     private static final Event UNISWAP_SWAP_EVENT = EventConstants.UNISWAP_SWAP_EVENT;
-    private static final List<TypeReference<Type>> NON_INDEXED_PARAMETERS = UNISWAP_SWAP_EVENT.getNonIndexedParameters();
     // define Balancer V2 Vault SWAP event
     private static final Event BALANCER_VAULT_SWAP_EVENT = EventConstants.BALANCER_VAULT_SWAP_EVENT;
     // define OneSwap Aggregator SWAP event
     private static final Event ONESWAP_TRADE_EXECUTED_EVENT = EventConstants.ONESWAP_TRADE_EXECUTED_EVENT;
-    private static final List<TypeReference<Type>> ONESWAP_TRADE_EXECUTED_NON_INDEXED_PARAMETERS = ONESWAP_TRADE_EXECUTED_EVENT.getNonIndexedParameters();
     // define OneSwap LimitOrder place event
     private static final Event ORDER_PLACED_EVENT = EventConstants.ORDER_PLACED_EVENT;
     // define OneSwap LimitOrder cancel event
