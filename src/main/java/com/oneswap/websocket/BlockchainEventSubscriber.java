@@ -8,11 +8,10 @@ import com.oneswap.model.User;
 import com.oneswap.repository.LiquidityRepository;
 import com.oneswap.repository.impl.LiquidityRepositoryImpl;
 import com.oneswap.service.*;
-import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationContext;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
@@ -35,17 +34,15 @@ import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.EthBlock;
 import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.Log;
-import org.web3j.utils.Convert;
 import org.web3j.utils.Numeric;
 
-import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.*;
 
 @Component
 @RequiredArgsConstructor
 @Log4j2
-public class InfraWeb3jClient {
+public class BlockchainEventSubscriber {
 
     @Value("${blockchain}")
     private String blockchain;
@@ -54,9 +51,9 @@ public class InfraWeb3jClient {
     @Value("${ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS}")
     private String ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS;
 
+    @Autowired
     @Qualifier("web3jWebsocket")
     private Web3j web3j;
-    private final ApplicationContext applicationContext;
     private final UniswapService uniswapService;
     private final BalancerService balancerService;
     private final LiquidityRepository liquidityRepository;
@@ -72,7 +69,7 @@ public class InfraWeb3jClient {
     private Set<String> monitoredBalancerPoolAddresses = new HashSet<>();
     String balancerV2VaultContractAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
-    // save the contracts of all token0 and token1
+    // save the Uniswap V2 contracts of all token0 and token1
     private Map<String, String> token0Map = new HashMap<>();
     private Map<String, String> token1Map = new HashMap<>();
 
@@ -91,31 +88,7 @@ public class InfraWeb3jClient {
     // define LimitOrder execute event
     private static final Event ORDER_EXECUTED_EVENT = EventConstants.ORDER_EXECUTED_EVENT;
 
-    public void setMonitoring(boolean start) {
-
-        if (this.start == start) {
-            log.info("WebSocket monitoring is already " + (start ? "started" : "stopped") + ".");
-            return;
-        }
-
-        this.start = start;
-        if (start) {
-            try {
-                if (web3j == null) {
-                    web3j = applicationContext.getBean("web3jWebsocket", Web3j.class);
-                }
-                init();
-                log.info("WebSocket monitoring started.");
-            } catch (Exception e) {
-                log.error("Error while starting WebSocket monitoring", e);
-            }
-        } else {
-            close();
-            log.info("WebSocket monitoring stopped.");
-        }
-    }
-
-    public void init() throws Exception {
+    public void init() {
         if ("Ethereum".equals(blockchain)) {
             uniswapPairAddresses = List.of( // USDT-WETH、WBTC-WETH
                     "0x0d4a11d5eeaac28ec3f61d100daf4d40471f1852",
@@ -158,19 +131,11 @@ public class InfraWeb3jClient {
         subscribeToContractEvents();
     }
 
-    // Every 600 seconds refresh data
-    @Scheduled(fixedRate = 60000 * 10 * 4)
+    // Every 4 hours refresh data
+    @Scheduled(fixedRate = 60000 * 60 * 4)
     public void resynchronizeReserves() {
         if (!start) return;
         fetchInitialReserves();
-    }
-
-    @PreDestroy
-    public void close() {
-        if (web3j != null) {
-            web3j.shutdown();
-            log.info("Web3j connection closed.");
-        }
     }
 
     private void subscribeToNewBlocks() {
@@ -421,12 +386,6 @@ public class InfraWeb3jClient {
         Uint256 amountIn = (Uint256) nonIndexedValues.get(0);
         Uint256 amountOut = (Uint256) nonIndexedValues.get(1);
         Uint8 exchange = (Uint8) nonIndexedValues.get(2);
-
-//        log.info("=======================OneSwap TradeExecuted event detected=======================");
-//        log.info("Trader: " + trader.getValue());
-//        log.info("[In] token: " + tokenIn.getValue() + " , amount: " + amountIn.getValue());
-//        log.info("[Out] token: " + tokenOut.getValue() + " , amount: " + amountOut.getValue());
-//        log.info("Exchange: " + exchange.getValue());
 
         User user = User.builder().address(trader.getValue()).build();
         Token tokenInObject = Token.builder().address(tokenIn.getValue()).build();
