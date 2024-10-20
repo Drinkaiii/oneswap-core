@@ -16,12 +16,10 @@ import org.springframework.stereotype.Component;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.web3j.abi.EventEncoder;
-import org.web3j.abi.FunctionEncoder;
 import org.web3j.abi.FunctionReturnDecoder;
 import org.web3j.abi.TypeReference;
 import org.web3j.abi.datatypes.Address;
 import org.web3j.abi.datatypes.Event;
-import org.web3j.abi.datatypes.Function;
 import org.web3j.abi.datatypes.Type;
 import org.web3j.abi.datatypes.generated.Bytes32;
 import org.web3j.abi.datatypes.generated.Uint256;
@@ -29,9 +27,7 @@ import org.web3j.abi.datatypes.generated.Uint8;
 import org.web3j.protocol.Web3j;
 import org.web3j.protocol.core.DefaultBlockParameterName;
 import org.web3j.protocol.core.methods.request.EthFilter;
-import org.web3j.protocol.core.methods.request.Transaction;
 import org.web3j.protocol.core.methods.response.EthBlock;
-import org.web3j.protocol.core.methods.response.EthCall;
 import org.web3j.protocol.core.methods.response.Log;
 import org.web3j.utils.Numeric;
 
@@ -193,44 +189,6 @@ public class BlockchainEventSubscriber {
 
     }
 
-    private String getToken0(String contractAddress) {
-        Function function = new Function("token0", Arrays.asList(), Arrays.asList(new TypeReference<Address>() {
-        }));
-        String token0 = null;
-        try {
-            token0 = callContractFunction(function, contractAddress);
-        } catch (Exception e) {
-            log.warn(e.getMessage());
-        }
-        return token0;
-    }
-
-    private String getToken1(String contractAddress) {
-        Function function = new Function("token1", Arrays.asList(), Arrays.asList(new TypeReference<Address>() {
-        }));
-        String token1 = null;
-        try {
-            token1 = callContractFunction(function, contractAddress);
-        } catch (Exception e) {
-            log.warn(e.getMessage());
-        }
-        return token1;
-    }
-
-    private String callContractFunction(Function function, String contractAddress) throws Exception {
-        // encode function
-        String encodedFunction = FunctionEncoder.encode(function);
-        // sign contract
-        Transaction transaction = Transaction.createEthCallTransaction(null, contractAddress, encodedFunction);
-        EthCall response = web3j.ethCall(transaction, DefaultBlockParameterName.LATEST).send();
-        if (response.isReverted())
-            throw new RuntimeException("Error calling contract function: " + response.getRevertReason());
-        // decode return value
-        List<Type> decodedResponse = FunctionReturnDecoder.decode(response.getValue(), function.getOutputParameters());
-        // assume the first return value is address
-        return decodedResponse.get(0).getValue().toString();
-    }
-
     private void listenToEvent(Event event, String contractAddress, EventHandler eventHandler) {
         String eventSignature = EventEncoder.encode(event);
         EthFilter filter = new EthFilter(
@@ -272,8 +230,8 @@ public class BlockchainEventSubscriber {
         Uint256 amountAOut = (Uint256) nonIndexedValues.get(2);
         Uint256 amountBOut = (Uint256) nonIndexedValues.get(3);
 
-        String tokenA = getToken0(contractAddress);
-        String tokenB = getToken1(contractAddress);
+        String tokenA = uniswapService.getToken0(contractAddress);
+        String tokenB = uniswapService.getToken1(contractAddress);
 
         BigInteger amountA = amountAIn.getValue().compareTo(BigInteger.ZERO) != 0
                 ? amountAIn.getValue()

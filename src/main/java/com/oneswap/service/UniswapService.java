@@ -10,4 +10,8 @@ public interface UniswapService {
 
     Liquidity getUniswapV2Reserves(String contractAddress) throws IOException;
 
+    String getToken0(String contractAddress);
+
+    String getToken1(String contractAddress);
+
 }
