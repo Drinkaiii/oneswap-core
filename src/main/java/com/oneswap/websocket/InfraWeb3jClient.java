@@ -51,6 +51,8 @@ public class InfraWeb3jClient {
     private String blockchain;
     @Value("${ONESWAP_V1_AGGREGATOR_SEPOLIA_ADDRESS}")
     private String ONESWAP_V1_AGGREGATOR_ADDRESS; // todo make network change infra
+    @Value("${ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS}")
+    private String ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS;
 
     @Qualifier("web3jWebsocket")
     private Web3j web3j;
@@ -68,7 +70,7 @@ public class InfraWeb3jClient {
     List<String> uniswapPairAddresses = new ArrayList<>();
     List balancerPairAddressesAndId = new ArrayList();
     private Set<String> monitoredBalancerPoolAddresses = new HashSet<>();
-    String limitOrderContractAddress = "0x08dfC836a3343618ffB412FFaDF3B882cB98852b";
+    String balancerV2VaultContractAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
 
     // save the contracts of all token0 and token1
     private Map<String, String> token0Map = new HashMap<>();
@@ -177,26 +179,10 @@ public class InfraWeb3jClient {
             BigInteger gasPrice = b.getBaseFeePerGas();
             if (gasPrice != null) {
                 networkService.saveGasFee(gasPrice);
-                logGasPrice(gasPrice);
             }
         }, error -> {
             log.error("Error in block subscription", error);
         });
-    }
-
-    private void logGasPrice(BigInteger gasPriceWei) {
-        BigDecimal gasPriceGwei = Convert.fromWei(new BigDecimal(gasPriceWei), Convert.Unit.GWEI);
-
-        String gasPriceLevel;
-        if (gasPriceGwei.compareTo(BigDecimal.valueOf(30)) < 0) {
-            gasPriceLevel = "Low";
-        } else if (gasPriceGwei.compareTo(BigDecimal.valueOf(60)) < 0) {
-            gasPriceLevel = "Medium";
-        } else {
-            gasPriceLevel = "High";
-        }
-
-        //log.info("Current Gas Price: {} Gwei ({})", gasPriceGwei.setScale(2, RoundingMode.HALF_UP), gasPriceLevel);
     }
 
     private void fetchInitialReserves() {
@@ -222,7 +208,7 @@ public class InfraWeb3jClient {
         }
     }
 
-    private void subscribeToContractEvents() throws Exception {
+    private void subscribeToContractEvents() {
 
         // listen Uniswap V2 SWAP event
         for (String contractAddress : uniswapPairAddresses) {
@@ -233,97 +219,27 @@ public class InfraWeb3jClient {
                 // convert to lower case
                 token0Map.put(contractAddress.toLowerCase(), token0);
                 token1Map.put(contractAddress.toLowerCase(), token1);
-                // use EthFilter set subscription condition
-                EthFilter filter = new EthFilter(
-                        DefaultBlockParameterName.LATEST,
-                        DefaultBlockParameterName.LATEST,
-                        contractAddress
-                );
-
                 // subscript events
-                web3j.ethLogFlowable(filter).subscribe(log -> {
-                    processUniswapSwapEvent(log);
-                }, error -> {
-                    log.error("Error while subscribing to contract events for contract: " + contractAddress, error);
-                });
-                log.info("Subscribed to contract events for contract: " + contractAddress);
+                listenToEvent(UNISWAP_SWAP_EVENT, contractAddress, this::processUniswapSwapEvent);
             } catch (Exception e) {
                 log.error("Error subscribing to contract events for contract: " + contractAddress, e);
             }
         }
 
         // listen Balancer V2 SWAP event
-        EthFilter filter = new EthFilter(
-                DefaultBlockParameterName.LATEST,
-                DefaultBlockParameterName.LATEST,
-                "0xBA12222222228d8Ba445958a75a0704d566BF2C8"
-        );
-        String swapEventSignature = EventEncoder.encode(BALANCER_VAULT_SWAP_EVENT);
-        filter.addSingleTopic(swapEventSignature);
-        web3j.ethLogFlowable(filter).subscribe(log -> {
-            processBalancerVaultSwapEvent(log);
-        }, error -> {
-            log.error("Error while subscribing to Vault contract events", error);
-        });
+        listenToEvent(BALANCER_VAULT_SWAP_EVENT, balancerV2VaultContractAddress, this::processBalancerVaultSwapEvent);
 
         // listen Oneswap V1 SWAP event
-        String dexAggregatorAddress = ONESWAP_V1_AGGREGATOR_ADDRESS;
-        EthFilter oneswapTradeExecutedFilter = new EthFilter(
-                DefaultBlockParameterName.LATEST,
-                DefaultBlockParameterName.LATEST,
-                dexAggregatorAddress
-        );
-        String oneswapTradeExecutedEventSignature = EventEncoder.encode(ONESWAP_TRADE_EXECUTED_EVENT);
-        oneswapTradeExecutedFilter.addSingleTopic(oneswapTradeExecutedEventSignature);
-        web3j.ethLogFlowable(oneswapTradeExecutedFilter).subscribe(log -> {
-            processOneswapTradeExecutedEvent(log);
-        }, error -> {
-            log.error("Error while subscribing to TradeExecuted event", error);
-        });
-        log.info("Subscribed to TradeExecuted events for DexAggregator contract: " + dexAggregatorAddress);
+        listenToEvent(ONESWAP_TRADE_EXECUTED_EVENT, ONESWAP_V1_AGGREGATOR_ADDRESS, this::processOneswapTradeExecutedEvent);
 
         // listen LimitOrder V1 OrderPlaced event
-        EthFilter orderPlacedFilter = new EthFilter(
-                DefaultBlockParameterName.LATEST,
-                DefaultBlockParameterName.LATEST,
-                limitOrderContractAddress
-        );
-        String orderPlacedEventSignature = EventEncoder.encode(ORDER_PLACED_EVENT);
-        orderPlacedFilter.addSingleTopic(orderPlacedEventSignature);
-        web3j.ethLogFlowable(orderPlacedFilter).subscribe(log -> {
-            processOrderPlacedEvent(log);
-        }, error -> {
-            log.error("Error while subscribing to OrderPlaced event", error);
-        });
+        listenToEvent(ORDER_PLACED_EVENT, ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS, this::processOrderPlacedEvent);
 
         // listen LimitOrder V1 OrderCancelled event
-        EthFilter orderCancelledFilter = new EthFilter(
-                DefaultBlockParameterName.LATEST,
-                DefaultBlockParameterName.LATEST,
-                limitOrderContractAddress
-        );
-        String orderCancelledEventSignature = EventEncoder.encode(ORDER_CANCELLED_EVENT);
-        orderCancelledFilter.addSingleTopic(orderCancelledEventSignature);
-        web3j.ethLogFlowable(orderCancelledFilter).subscribe(log -> {
-            processOrderCancelledEvent(log);
-        }, error -> {
-            log.error("Error while subscribing to OrderCancelled event", error);
-        });
+        listenToEvent(ORDER_CANCELLED_EVENT, ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS, this::processOrderCancelledEvent);
 
         // listen LimitOrder V1 OrderExecuted event
-        EthFilter orderExecutedFilter = new EthFilter(
-                DefaultBlockParameterName.LATEST,
-                DefaultBlockParameterName.LATEST,
-                limitOrderContractAddress
-        );
-        String orderExecutedEventSignature = EventEncoder.encode(ORDER_EXECUTED_EVENT);
-        orderExecutedFilter.addSingleTopic(orderExecutedEventSignature);
-        web3j.ethLogFlowable(orderExecutedFilter).subscribe(log -> {
-            processOrderExecutedEvent(log);
-        }, error -> {
-            log.error("Error while subscribing to OrderExecuted event", error);
-        });
-
+        listenToEvent(ORDER_EXECUTED_EVENT, ONESWAP_V1_LIMITORDER_SEPOLIA_ADDRESS, this::processOrderExecutedEvent);
 
     }
 
@@ -354,6 +270,24 @@ public class InfraWeb3jClient {
         // assume the first return value is address
         return decodedResponse.get(0).getValue().toString();
     }
+
+    private void listenToEvent(Event event, String contractAddress, EventHandler eventHandler) {
+        String eventSignature = EventEncoder.encode(event);
+        EthFilter filter = new EthFilter(
+                DefaultBlockParameterName.LATEST,
+                DefaultBlockParameterName.LATEST,
+                contractAddress
+        );
+        filter.addSingleTopic(eventSignature);
+
+        web3j.ethLogFlowable(filter).subscribe(eventLog -> {
+            eventHandler.handleLog(eventLog);
+        }, error -> {
+            log.error("Error while subscribing to event for contract: " + contractAddress, error);
+        });
+        log.info("Subscribed to contract events for contract: " + contractAddress);
+    }
+
 
     @Transactional
     public void processUniswapSwapEvent(Log eventLog) {
@@ -418,7 +352,6 @@ public class InfraWeb3jClient {
                 log.warn(e);
             }
         }
-
 
     }
 
@@ -598,6 +531,5 @@ public class InfraWeb3jClient {
         recordService.updateLimitOrder(orderId.getValue().longValue(), LimitOrder.STATUS_FILLED, amountOut.getValue());
 
     }
-
 
 }
