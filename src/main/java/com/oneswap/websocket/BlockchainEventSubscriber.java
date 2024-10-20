@@ -8,7 +8,6 @@ import com.oneswap.model.User;
 import com.oneswap.repository.LiquidityRepository;
 import com.oneswap.repository.impl.LiquidityRepositoryImpl;
 import com.oneswap.service.*;
-import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -68,10 +67,6 @@ public class BlockchainEventSubscriber {
     List balancerPairAddressesAndId = new ArrayList();
     private Set<String> monitoredBalancerPoolAddresses = new HashSet<>();
     String balancerV2VaultContractAddress = "0xBA12222222228d8Ba445958a75a0704d566BF2C8";
-
-    // save the Uniswap V2 contracts of all token0 and token1
-    private Map<String, String> token0Map = new HashMap<>();
-    private Map<String, String> token1Map = new HashMap<>();
 
     // define Uniswap V2 Router SWAP event
     private static final Event UNISWAP_SWAP_EVENT = EventConstants.UNISWAP_SWAP_EVENT;
@@ -177,18 +172,8 @@ public class BlockchainEventSubscriber {
 
         // listen Uniswap V2 SWAP event
         for (String contractAddress : uniswapPairAddresses) {
-            try {
-                // get token0 and token1
-                String token0 = getToken0(contractAddress);
-                String token1 = getToken1(contractAddress);
-                // convert to lower case
-                token0Map.put(contractAddress.toLowerCase(), token0);
-                token1Map.put(contractAddress.toLowerCase(), token1);
-                // subscript events
-                listenToEvent(UNISWAP_SWAP_EVENT, contractAddress, this::processUniswapSwapEvent);
-            } catch (Exception e) {
-                log.error("Error subscribing to contract events for contract: " + contractAddress, e);
-            }
+            // subscript events
+            listenToEvent(UNISWAP_SWAP_EVENT, contractAddress, this::processUniswapSwapEvent);
         }
 
         // listen Balancer V2 SWAP event
@@ -208,17 +193,27 @@ public class BlockchainEventSubscriber {
 
     }
 
-    private String getToken0(String contractAddress) throws Exception {
+    private String getToken0(String contractAddress) {
         Function function = new Function("token0", Arrays.asList(), Arrays.asList(new TypeReference<Address>() {
         }));
-        String token0 = callContractFunction(function, contractAddress);
+        String token0 = null;
+        try {
+            token0 = callContractFunction(function, contractAddress);
+        } catch (Exception e) {
+            log.warn(e.getMessage());
+        }
         return token0;
     }
 
-    private String getToken1(String contractAddress) throws Exception {
+    private String getToken1(String contractAddress) {
         Function function = new Function("token1", Arrays.asList(), Arrays.asList(new TypeReference<Address>() {
         }));
-        String token1 = callContractFunction(function, contractAddress);
+        String token1 = null;
+        try {
+            token1 = callContractFunction(function, contractAddress);
+        } catch (Exception e) {
+            log.warn(e.getMessage());
+        }
         return token1;
     }
 
@@ -253,8 +248,6 @@ public class BlockchainEventSubscriber {
         log.info("Subscribed to contract events for contract: " + contractAddress);
     }
 
-
-    @Transactional
     public void processUniswapSwapEvent(Log eventLog) {
 
         String contractAddress = eventLog.getAddress();
@@ -279,8 +272,8 @@ public class BlockchainEventSubscriber {
         Uint256 amountAOut = (Uint256) nonIndexedValues.get(2);
         Uint256 amountBOut = (Uint256) nonIndexedValues.get(3);
 
-        String tokenA = token0Map.get(contractAddress);
-        String tokenB = token1Map.get(contractAddress);
+        String tokenA = getToken0(contractAddress);
+        String tokenB = getToken1(contractAddress);
 
         BigInteger amountA = amountAIn.getValue().compareTo(BigInteger.ZERO) != 0
                 ? amountAIn.getValue()
