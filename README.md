@@ -1,8 +1,20 @@
 # oneswap-core
-OneSwap core back-end
+![Build Status](https://img.shields.io/github/actions/workflow/status/drinkaiii/oneswap-core/deploy.yml?branch=action)
+![License](https://img.shields.io/github/license/drinkaiii/oneswap-core)
+
+website：https://oneswap.biz
+
+### OneSwap Repo
+- Front-end：https://github.com/Drinkaiii/oneswap-interface
+- Worker Back-end：https://github.com/Drinkaiii/oneswap-worker
+- Core Back-end： https://github.com/Drinkaiii/oneswap-core (you are here)
+
 
 ### Project Introduction
 **OneSwap** is a decentralized exchange (DEX) aggregator for cryptocurrency token transactions. It offers two primary features: **Swap** and **Limit Orders**, providing users with flexibility in trading. Currently, OneSwap supports both **Uniswap v2** and **Balancer v2**, with plans to integrate additional protocols in the future.
+- Swap: Instantly checks and updates the best trading route, offering users the most favorable exchange rate for transactions.
+- Limit: Provides users with limit order trading, automatically executing the trade when the market conditions set by the user are met.
+
 
 ### Architecture
 OneSwap consists of front-end, back-end and smart contracts.
@@ -12,6 +24,11 @@ OneSwap consists of front-end, back-end and smart contracts.
 - Core Back-End is responsible for monitoring the liquidity changes and transaction records, which are stored in RDS and ElastiCache respectively. Use CloudWatch to monitor system exceptions and Lambda to switch backup EC2.
 - There are two smart contracts: Aggregator and Limit Order, which handle spot transactions and limit transactions, respectively. The Limit Order contract is monitored and triggered by the Core Back-End for execution.
 ![OneSwap-architecture](https://github.com/user-attachments/assets/1baa12d0-85f9-4763-8f47-7a09351468ac)
+- Users retrieve React static resources from S3 through the CloudFront endpoint, while accessing price data or other APIs through CloudFront and Worker Back-End.
+- Worker Back-End uses Nginx to upgrade HTTP to WebSocket.
+- Core Back-End monitors decentralized exchange liquidity on the blockchain via Infura and transmits price data in Redis Pub/Sub to Worker Back-End that has subscribed to the pairs.
+- Core Back-End utilizes RDS to store users' transaction records, making them available for query by Worker Back-End.
+- Using CloudWatch to check Core Back-End's status, if an anomaly is detected, the system will restart the instance and use a Lambda function to trigger the WebSocket switch on another Core Back-End, immediately resuming service.
 
 ### **Local Deployment**
 
